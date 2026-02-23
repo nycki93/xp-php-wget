@@ -1,3 +1,11 @@
+DIR_IN = src
+DIR_OUT = site
+ENTRYPOINTS = / /unlisted/
+
+SERVER = 0.0.0.0
+PORT = 8000
+TEMP_LOG = temp.log
+
 .PHONY: site clean
 
 # run php website on localhost, in a background process.
@@ -6,10 +14,18 @@
 # finally, kill the background process.
 # TODO: is it possible to do this without generating a separate log file?
 site:
-	php -S localhost:8000 -t src >> log.txt 2>&1 & export SERVER_PID=$$!; \
-	tail -f -n0 log.txt | grep -qe 'started' \
-	&& wget -mpckE -nH -P site localhost:8000 localhost:8000/unlisted/; \
-	kill $$SERVER_PID && echo "done"
+	php -S $(SERVER):$(PORT) -t $(DIR_IN) > $(TEMP_LOG) 2>&1 & export SERVER_PID=$$!; \
+	tail -f $(TEMP_LOG) | grep -qe 'started' && \
+	wget \
+		--mirror \
+		--page-requisites \
+		--adjust-extension \
+		--no-host-directories \
+		--directory-prefix=$(DIR_OUT) \
+		--accept-regex='/unlisted/' \
+		--reject-regex='/\.' \
+		$(foreach PATH,$(ENTRYPOINTS),$(SERVER):$(PORT)$(PATH)); \
+	kill $$SERVER_PID; rm $(TEMP_LOG)
 
 clean:
-	rm -r site log.txt
+	rm -r $(DIR_OUT)
