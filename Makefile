@@ -6,6 +6,9 @@ SERVER = 0.0.0.0
 PORT = 8000
 TEMP_LOG = temp.log
 
+# string used to identify "default" index.html filenames so they can be renamed later.
+DEFAULT_PAGE = _DEFAULT_PAGE
+
 .PHONY: site clean
 
 # run php website on localhost, in a background process.
@@ -25,9 +28,11 @@ site:
 		--no-host-directories \
 		--directory-prefix=$(DIR_OUT) \
 		--reject-regex='/\.' \
+		--default-page='index$(DEFAULT_PAGE)' \
 		$(foreach PATH,$(ENTRYPOINTS),$(SERVER):$(PORT)$(PATH)); \
 	kill $$SERVER_PID; rm $(TEMP_LOG); \
-	find site -name "*.html" -exec sed -ri 's/href="([^"]*)\/index\.html"/href="\1\/"/gi' {} \;
+	find site -name "*.html" -exec sed -ri 's/index$(DEFAULT_PAGE).html//gi' {} \; && \
+	find site -name "index$(DEFAULT_PAGE).html" -exec sh -c 'f="{}"; mv "$$f" "$${f%$(DEFAULT_PAGE).html}.html"' \;
 
 clean:
 	rm -r $(DIR_OUT)
